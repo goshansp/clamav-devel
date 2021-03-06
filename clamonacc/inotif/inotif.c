@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2019-2020 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
+ *  Copyright (C) 2019-2021 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *
  *  Authors: Mickey Sola
  *
@@ -363,7 +363,7 @@ void *onas_ddd_th(void *arg)
     const struct optstruct *pt;
     const struct optstruct *pt_tmpdir;
     const char *clamd_tmpdir;
-    uint64_t in_mask = IN_ONLYDIR | IN_MOVE | IN_DELETE | IN_CREATE;
+    uint64_t in_mask = IN_ONLYDIR | IN_MOVE | IN_DELETE | IN_CREATE | IN_CLOSE_WRITE;
     fd_set rfds;
     char buf[4096];
     ssize_t bread;
@@ -657,7 +657,13 @@ void *onas_ddd_th(void *arg)
                     onas_ddd_handle_in_moved_from(ctx, path, child_path, event, wd);
 
                 } else if (event->mask & IN_CREATE) {
-                    onas_ddd_handle_in_create(ctx, path, child_path, event, wd, in_mask);
+                    if (event->mask & IN_ISDIR) {
+                        onas_ddd_handle_in_create(ctx, path, child_path, event, wd, in_mask);
+                    }
+                } else if (event->mask & IN_CLOSE_WRITE) {
+                    if (!(event->mask & IN_ISDIR)) {
+                        onas_ddd_handle_in_create(ctx, path, child_path, event, wd, in_mask);
+                    }
 
                 } else if (event->mask & IN_MOVED_TO) {
                     onas_ddd_handle_in_moved_to(ctx, path, child_path, event, wd, in_mask);
